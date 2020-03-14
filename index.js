@@ -162,9 +162,7 @@ doc.loadInfo().then(() => {
             await getUser(access_token);
         }
         const userId = accessTokenUserIdMap[access_token];
-        await sheet.addRows([
-            {user: userId, song: song, tag: tag},
-        ]);
+        await sheet.addRow({user: userId, song: song, tag: tag});
     });
 
     app.get('/refresh_token', function (req, res) {

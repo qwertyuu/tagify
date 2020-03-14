@@ -24,13 +24,21 @@
         <a href="/login" class="btn btn-primary">Log in with Spotify</a>
     </div>
     <div id="loggedin">
-        <div id="user-profile">
+        <div id="user-profile" style="display: none;">
         </div>
         <div id="user-song">
         </div>
-        <div id="oauth">
+        <div id="user-song-tags">
+            <input type="text" id="tag">
+            <button id="add-tag">+Tag</button>
         </div>
-        <button class="btn btn-default" id="obtain-new-token">Obtain new token using the refresh token</button>
+        <div id="user-song-features">
+        </div>
+        <div id="oauth" style="display: none;">
+        </div>
+        <button class="btn btn-default" id="obtain-new-token" style="display: none;">Obtain new token using the refresh
+            token
+        </button>
     </div>
 </div>
 
@@ -68,8 +76,41 @@
             <dd>{{item.id}}</dd>
             <dt>Spotify URI</dt>
             <dd><a href="{{item.external_urls.spotify}}">{{item.external_urls.spotify}}</a></dd>
-            <dt>Link</dt>
-            <dd><a href="{{item.href}}">{{item.href}}</a></dd>
+        </dl>
+    </div>
+</div>
+</script>
+<script id="user-song-features-template" type="text/x-handlebars-template">
+<h1>Features</h1>
+<div class="media">
+    <div class="media-body">
+        <dl class="dl-horizontal">
+            <dt>Duration MS</dt>
+            <dd>{{duration_ms}}</dd>
+            <dt>Key</dt>
+            <dd>{{key}}</dd>
+            <dt>Mode</dt>
+            <dd>{{mode}}</dd>
+            <dt>Time signature</dt>
+            <dd>{{time_signature}}</dd>
+            <dt>Acousticness</dt>
+            <dd>{{acousticness}}</dd>
+            <dt>Danceability</dt>
+            <dd>{{danceability}}</dd>
+            <dt>Energy</dt>
+            <dd>{{energy}}</dd>
+            <dt>Instrumentalness</dt>
+            <dd>{{instrumentalness}}</dd>
+            <dt>Liveness</dt>
+            <dd>{{liveness}}</dd>
+            <dt>Loudness</dt>
+            <dd>{{loudness}}</dd>
+            <dt>Speechiness</dt>
+            <dd>{{speechiness}}</dd>
+            <dt>Valence</dt>
+            <dd>{{valence}}</dd>
+            <dt>Tempo</dt>
+            <dd>{{tempo}}</dd>
         </dl>
     </div>
 </div>
@@ -90,6 +131,8 @@
 <script>
 (function () {
 
+    var currentSongId;
+
     /**
      * Obtains parameters from the hash of the URL
      * @return Object
@@ -104,11 +147,29 @@
         return hashParams;
     }
 
+    $('#add-tag').click(() => {
+        $.ajax({
+            type: "POST",
+            url: '/tag',
+            contentType: "application/json",
+            headers: {
+                'Authorization': 'Bearer ' + access_token
+            },
+            data: JSON.stringify({
+                song: currentSongId,
+                tag: $("#tag").val(),
+            }),
+        });
+    });
+
     var userProfileSource = document.getElementById('user-profile-template').innerHTML,
         userSongSource = document.getElementById('user-song-template').innerHTML,
+        userSongFeaturesSource = document.getElementById('user-song-features-template').innerHTML,
         userProfileTemplate = Handlebars.compile(userProfileSource),
         userSongTemplate = Handlebars.compile(userSongSource),
+        userSongFeaturesTemplate = Handlebars.compile(userSongFeaturesSource),
         userProfilePlaceholder = document.getElementById('user-profile'),
+        userSongFeaturesPlaceholder = document.getElementById('user-song-features'),
         userSongPlaceholder = document.getElementById('user-song');
 
     var oauthSource = document.getElementById('oauth-template').innerHTML,
@@ -151,21 +212,23 @@
                 },
                 success: function (response) {
                     if (!response) {
+                        userSongPlaceholder.innerHTML = userSongTemplate({item: {name: "not playing"}});
                         return;
                     }
+                    currentSongId = response.item.id;
                     userSongPlaceholder.innerHTML = userSongTemplate(response);
 
                     $.ajax({
-                        type: "POST",
-                        url: '/tag',
-                        contentType: "application/json",
+                        url: 'https://api.spotify.com/v1/audio-features/' + currentSongId,
                         headers: {
                             'Authorization': 'Bearer ' + access_token
                         },
-                        data: JSON.stringify({
-                            song: response.item.id,
-                            tag: "test",
-                        }),
+                        success: function (response) {
+                            userSongFeaturesPlaceholder.innerHTML = userSongFeaturesTemplate(response);
+                        },
+                        error: function (e) {
+                            console.log(e);
+                        }
                     });
                 }
             });
