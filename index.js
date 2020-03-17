@@ -206,11 +206,11 @@ doc.loadInfo().then(async () => {
         }
         const userId = accessTokenUserIdMap[access_token];
 
-        res.json(_.filter(rows, (row) => {
+        res.json(_.uniq(_.filter(rows, (row) => {
             return row.user === userId;
         }).map((row) => {
             return row.tag;
-        }));
+        })));
     });
 
     app.get('/refresh_token', function (req, res) {
