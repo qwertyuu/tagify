@@ -32,6 +32,7 @@
     "google-spreadsheet": "^3.0.9",
     "querystring": "~0.2.0",
     "request": "~2.83.0",
-    "body-parser": "latest"
+    "body-parser": "latest",
+    "lodash": "latest"
   }
 }

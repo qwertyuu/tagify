@@ -10,6 +10,7 @@
 var express = require('express'); // Express web server framework
 var request = require('request'); // "Request" library
 var cors = require('cors');
+var _ = require('lodash');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
@@ -20,9 +21,14 @@ const {GoogleSpreadsheet} = require('google-spreadsheet');
 const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID);
 // use service account creds
 doc.useServiceAccountAuth(require(process.env.GOOGLE_SERVICE_ACCOUNT_JSON));
-doc.loadInfo().then(() => {
+doc.loadInfo().then(async () => {
 
     var sheet = doc.sheetsByIndex[0];
+    var rows = await sheet.getRows();
+
+    setInterval(async () => {
+        rows = await sheet.getRows();
+    }, 2000);
 
     var client_id = process.env.SPOTIFY_CLIENT_ID; // Your client id
     var client_secret = process.env.SPOTIFY_CLIENT_SECRET; // Your secret
@@ -154,8 +160,12 @@ doc.loadInfo().then(() => {
         });
     }
 
-    app.post('/tag', async function (req) {
+    app.post('/tags', async function (req, res) {
         var access_token = (req.headers.authorization || "").replace('Bearer ', '');
+        if (!access_token) {
+            res.send('error');
+            return;
+        }
         var song = req.body.song || null;
         var tag = req.body.tag || null;
         if (!(access_token in accessTokenUserIdMap)) {
@@ -163,6 +173,44 @@ doc.loadInfo().then(() => {
         }
         const userId = accessTokenUserIdMap[access_token];
         await sheet.addRow({user: userId, song: song, tag: tag});
+        res.send('OK');
+    });
+
+    app.get('/tags/:song_id', async function (req, res) {
+        var access_token = (req.headers.authorization || "").replace('Bearer ', '');
+        if (!access_token) {
+            res.send('error');
+            return;
+        }
+        var song = req.params.song_id;
+        if (!(access_token in accessTokenUserIdMap)) {
+            await getUser(access_token);
+        }
+        const userId = accessTokenUserIdMap[access_token];
+
+        res.json(_.filter(rows, (row) => {
+            return row.user === userId && row.song === song;
+        }).map((row) => {
+            return row.tag;
+        }));
+    });
+
+    app.get('/tags', async function (req, res) {
+        var access_token = (req.headers.authorization || "").replace('Bearer ', '');
+        if (!access_token) {
+            res.send('error');
+            return;
+        }
+        if (!(access_token in accessTokenUserIdMap)) {
+            await getUser(access_token);
+        }
+        const userId = accessTokenUserIdMap[access_token];
+
+        res.json(_.filter(rows, (row) => {
+            return row.user === userId;
+        }).map((row) => {
+            return row.tag;
+        }));
     });
 
     app.get('/refresh_token', function (req, res) {

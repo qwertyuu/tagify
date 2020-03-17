@@ -28,9 +28,17 @@
         </div>
         <div id="user-song">
         </div>
-        <div id="user-song-tags">
-            <input type="text" id="tag">
-            <button id="add-tag">+Tag</button>
+        <div>
+            <h1>All your tags</h1>
+            <ul id="all-user-song-tags">
+            </ul>
+            <h1>Song tags</h1>
+            <ul id="user-song-tags">
+            </ul>
+        </div>
+        <input type="text" id="tag">
+        <button id="add-tag">+Tag</button>
+        <div id="all-user-tags">
         </div>
         <div id="user-song-features">
         </div>
@@ -147,18 +155,37 @@
         return hashParams;
     }
 
+    function addTag(tagName) {
+      var ul = document.getElementById("user-song-tags");
+      var li = document.createElement("li");
+      li.appendChild(document.createTextNode(tagName));
+      ul.appendChild(li);
+    }
+
+    function addGlobalTag(tagName) {
+      var ul = document.getElementById("all-user-song-tags");
+      var li = document.createElement("li");
+      li.appendChild(document.createTextNode(tagName));
+      ul.appendChild(li);
+    }
+
     $('#add-tag').click(() => {
+        var tagvalue = $("#tag").val();
         $.ajax({
             type: "POST",
-            url: '/tag',
+            url: '/tags',
             contentType: "application/json",
             headers: {
                 'Authorization': 'Bearer ' + access_token
             },
             data: JSON.stringify({
                 song: currentSongId,
-                tag: $("#tag").val(),
+                tag: tagvalue,
             }),
+            success: function () {
+                addTag(tagvalue);
+                $("#tag").val('');
+            }
         });
     });
 
@@ -190,6 +217,18 @@
             oauthPlaceholder.innerHTML = oauthTemplate({
                 access_token: access_token,
                 refresh_token: refresh_token
+            });
+
+            $.ajax({
+                url: '/tags',
+                headers: {
+                    'Authorization': 'Bearer ' + access_token
+                },
+                success: function (response) {
+                    for (var i = 0; i < response.length; i++) {
+                        addGlobalTag(response[i]);
+                    }
+                }
             });
 
             $.ajax({
@@ -230,8 +269,21 @@
                             console.log(e);
                         }
                     });
+
+                    $.ajax({
+                        url: '/tags/' + currentSongId,
+                        headers: {
+                            'Authorization': 'Bearer ' + access_token
+                        },
+                        success: function (response) {
+                            for (var i = 0; i < response.length; i++) {
+                                addTag(response[i]);
+                            }
+                        }
+                    });
                 }
             });
+
         } else {
             // render initial screen
             $('#login').show();
