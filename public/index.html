@@ -169,6 +169,12 @@
       ul.appendChild(li);
     }
 
+    $("#tag").keyup(function(event) {
+        if (event.code === 'Enter') {
+            $("#add-tag").click();
+        }
+    });
+
     $('#add-tag').click(() => {
         var tagvalue = $("#tag").val();
         $.ajax({
